@@ -1,0 +1,97 @@
+// server.js
+const express = require('express');
+const cors = require('cors');
+const fs = require('fs').promises;
+const path = require('path');
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+// Read data from JSON files
+async function readJsonFile(filename) {
+    try {
+        const data = await fs.readFile(filename, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            // If file doesn't exist, return default data
+            return filename.includes('config') 
+                ? { admin: { username: 'admin', password: 'admin123' } }
+                : [];
+        }
+        throw error;
+    }
+}
+
+// Write data to JSON files
+async function writeJsonFile(filename, data) {
+    await fs.writeFile(filename, JSON.stringify(data, null, 2), 'utf8');
+}
+
+// API endpoints
+app.get('/api/tasks', async (req, res) => {
+    try {
+        const tasks = await readJsonFile('data/tasks.json');
+        res.json(tasks);
+    } catch (error) {
+        res.status(500).json({ error: 'Error reading tasks' });
+    }
+});
+
+app.post('/api/tasks', async (req, res) => {
+    try {
+        const tasks = await readJsonFile('data/tasks.json');
+        const newTask = req.body;
+        tasks.push(newTask);
+        await writeJsonFile('data/tasks.json', tasks);
+        res.json(tasks);
+    } catch (error) {
+        res.status(500).json({ error: 'Error adding task' });
+    }
+});
+
+app.put('/api/tasks/:index', async (req, res) => {
+    try {
+        const tasks = await readJsonFile('data/tasks.json');
+        const index = parseInt(req.params.index);
+        tasks[index] = req.body;
+        await writeJsonFile('data/tasks.json', tasks);
+        res.json(tasks);
+    } catch (error) {
+        res.status(500).json({ error: 'Error updating task' });
+    }
+});
+
+app.delete('/api/tasks/:index', async (req, res) => {
+    try {
+        const tasks = await readJsonFile('data/tasks.json');
+        const index = parseInt(req.params.index);
+        tasks.splice(index, 1);
+        await writeJsonFile('data/tasks.json', tasks);
+        res.json(tasks);
+    } catch (error) {
+        res.status(500).json({ error: 'Error deleting task' });
+    }
+});
+
+app.post('/api/login', async (req, res) => {
+    try {
+        const config = await readJsonFile('data/config.json');
+        const { username, password } = req.body;
+        
+        if (username === config.admin.username && password === config.admin.password) {
+            res.json({ success: true });
+        } else {
+            res.status(401).json({ error: 'Invalid credentials' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Error during login' });
+    }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});

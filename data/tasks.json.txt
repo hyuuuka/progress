@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Ticket System",
+    "progress": 0
+  },
+  {
+    "name": "Embeds",
+    "progress": 50
+  },
+  {
+    "name": "Bot logs",
+    "progress": 100
+  }
+]
